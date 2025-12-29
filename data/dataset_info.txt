@@ -1,0 +1,5 @@
+Dataset de Qualidade do Ar
+Gerado em: 2025-12-29 09:34:26.501190
+Total registros: 65,760
+Cidades: São Paulo, Rio de Janeiro, New York, Los Angeles, Delhi, Mumbai, Beijing, Shanghai, Tokyo, London
+Poluentes: PM2.5, NO2, O3
