@@ -32,7 +32,7 @@ class DataCollector:
         os.makedirs(self.raw_dir, exist_ok=True)
         os.makedirs(self.processed_dir, exist_ok=True)
         
-        # Cidades selecionadas (pode ajustar)
+        # Cidades selecionadas
         self.cities = [
             'São Paulo', 'Rio de Janeiro',
             'New York', 'Los Angeles',
@@ -55,10 +55,6 @@ class DataCollector:
         """
         print("📥 Método 1: Download do Kaggle")
         try:
-            # Para usar este método, configure a API do Kaggle:
-            # 1. Crie token em https://www.kaggle.com/settings
-            # 2. Salve kaggle.json em ~/.kaggle/
-            
             from kaggle.api.kaggle_api_extended import KaggleApi
             api = KaggleApi()
             api.authenticate()
@@ -78,35 +74,38 @@ class DataCollector:
     
     def download_sample_data(self):
         """
-        Método alternativo: Usar dados de amostra ou baixar via API
+        Método alternativo: Usar dados de amostra
         """
         print("📥 Método 2: Criando dataset de exemplo para desenvolvimento")
         
-        # Criar dados sintéticos para desenvolvimento inicial
         np.random.seed(42)
-        dates = pd.date_range(self.start_date, self.end_date, freq='D')
-        num_days = len(dates)
+        dates = pd.date_range(self.start_date, '2023-12-31', freq='D')  # Reduzido para teste
         
         data = []
+        
         for city in self.cities:
             for pollutant in self.pollutants:
+                print(f"  Gerando dados para {city} - {pollutant}...", end='\r')
+                
                 # Valores base por cidade e poluente
                 if 'Delhi' in city or 'Beijing' in city:
-                    base_value = np.random.uniform(50, 200)
+                    base_value = np.random.uniform(80, 200)
                 elif 'São Paulo' in city or 'Mumbai' in city:
-                    base_value = np.random.uniform(30, 100)
+                    base_value = np.random.uniform(40, 120)
                 else:
-                    base_value = np.random.uniform(10, 50)
+                    base_value = np.random.uniform(10, 60)
                 
-                # Adicionar sazonalidade
-                for i, date in enumerate(dates):
+                for i, date in enumerate(dates[:180]):  # Apenas 180 dias por combinação
                     # Variação sazonal
-                    seasonal = 20 * np.sin(2 * np.pi * i / 365)
+                    seasonal = 10 * np.sin(2 * np.pi * i / 365)
+                    
+                    # Tendência temporal
+                    year_trend = -0.5 * (date.year - 2020)
                     
                     # Variação aleatória
                     random_var = np.random.normal(0, 10)
                     
-                    value = max(0, base_value + seasonal + random_var)
+                    value = max(1, base_value + seasonal + year_trend + random_var)
                     
                     data.append({
                         'date': date,
@@ -119,13 +118,14 @@ class DataCollector:
                         'longitude': self._get_coordinates(city)[1]
                     })
         
+        print(" " * 50, end='\r')
         df = pd.DataFrame(data)
         
         # Salvar dados
         sample_path = os.path.join(self.raw_dir, 'sample_data.csv')
         df.to_csv(sample_path, index=False)
         
-        print(f"✅ Dataset de exemplo criado: {len(df)} registros")
+        print(f"✅ Dataset de exemplo criado: {len(df):,} registros")
         print(f"💾 Salvo em: {sample_path}")
         
         return df
@@ -165,10 +165,6 @@ class DataCollector:
     def get_data(self, use_sample=True):
         """
         Método principal para obter dados
-        
-        Args:
-            use_sample (bool): Se True, usa dados de exemplo
-                               Se False, tenta baixar dados reais
         """
         print("=" * 60)
         print("🌍 COLETA DE DADOS - QUALIDADE DO AR")
@@ -177,7 +173,6 @@ class DataCollector:
         if not use_sample:
             success = self.download_from_kaggle()
             if success:
-                # Encontrar arquivo baixado
                 for file in os.listdir(self.raw_dir):
                     if file.endswith('.csv'):
                         filepath = os.path.join(self.raw_dir, file)
@@ -189,7 +184,6 @@ class DataCollector:
             return df
 
 if __name__ == "__main__":
-    # Testar o coletor de dados
     collector = DataCollector()
     df = collector.get_data(use_sample=True)
     
@@ -198,14 +192,3 @@ if __name__ == "__main__":
     print(f"Cidades: {df['city'].unique().tolist()}")
     print(f"Poluentes: {df['parameter'].unique().tolist()}")
     print(f"Período: {df['date'].min()} a {df['date'].max()}")
-    
-    # Salvar informações
-    info_path = os.path.join(collector.data_dir, 'dataset_info.txt')
-    with open(info_path, 'w') as f:
-        f.write(f"Dataset de Qualidade do Ar\n")
-        f.write(f"Gerado em: {datetime.now()}\n")
-        f.write(f"Total registros: {len(df):,}\n")
-        f.write(f"Cidades: {', '.join(df['city'].unique())}\n")
-        f.write(f"Poluentes: {', '.join(df['parameter'].unique())}\n")
-    
-    print(f"\n📝 Informações salvas em: {info_path}")
